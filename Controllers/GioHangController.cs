@@ -5,7 +5,7 @@ using System.Web;
 using System.Web.Mvc;
 using Tuan5_DoanTrungHieu.Models;
 
-namespace Tuan5_NguyenMinhTrieu.Controllers
+namespace Tuan5_DoanTrungHieu.Controllers
 {
     public class GiohangController : Controller
     {
@@ -113,6 +113,64 @@ namespace Tuan5_NguyenMinhTrieu.Controllers
             List<GioHang> lstGiohang = Laygiohang();
             lstGiohang.Clear();
             return RedirectToAction("GioHang");
+        }
+
+        [HttpGet]
+        public ActionResult DatHang()
+        {
+            if (Session["TaiKhoan"] == null || Session["TaiKhoan"].ToString() == null)
+            {
+                return RedirectToAction("DangNhap", "NguoiDung");
+            }
+            if (Session["GioHang"] == null)
+            {
+                return RedirectToAction("ListSach", "Sach");
+            }
+            List<GioHang> lstGiohang = Laygiohang();
+            ViewBag.TongSoLuong = TongSoLuong();
+            ViewBag.TongTien = TongTien();
+            ViewBag.Tongsoluongsanpham = TongSoLuongSanPham();
+            return View(lstGiohang);
+        }
+        [HttpPost]
+        public ActionResult DatHang(FormCollection collection)
+        {
+            DonHang dh = new DonHang();
+            KhachHang kh = (KhachHang)Session["TaiKhoan"];
+            Sach s = new Sach();
+
+            List<GioHang> gh = Laygiohang();
+            var ngaygiao = String.Format("{0:MM/dd/yyyy}", collection["NgayGiao"]);
+
+            dh.makh = kh.makh;
+            dh.ngaydat = DateTime.Now;
+            dh.ngaygiao = DateTime.Parse(ngaygiao);
+            dh.giaohang = false;
+            dh.thanhtoan = false;
+
+            data.DonHangs.InsertOnSubmit(dh);
+            data.SubmitChanges();
+            foreach(var item in gh)
+            {
+                ChiTietDonHang ct = new ChiTietDonHang();
+                ct.madon = dh.madon;
+                ct.masach = item.masach;
+                ct.soluong = item.iSoLuong;
+                ct.gia = (decimal)item.giaban;
+                s = data.Saches.Single(n => n.masach == item.masach);
+                s.soluongton -= ct.soluong;
+                data.SubmitChanges();
+
+                data.ChiTietDonHangs.InsertOnSubmit(ct);
+
+            }
+            data.SubmitChanges();
+            Session["GioHang"] = null;
+            return RedirectToAction("XacNhan", "GioHang");
+        }
+        public ActionResult XacNhan()
+        {
+            return View();
         }
     }
 }
